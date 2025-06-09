@@ -1,7 +1,7 @@
 import typing
 from abc import ABC, abstractmethod
 from math import sin, cos, tan, log , radians
-from typing import Any
+from typing import Any , Optional
 
 
 # Constants for actions
@@ -14,7 +14,7 @@ class SimpleCalculator:
     def __init__(self):
         self.__last_result = None
 
-    def calculate(self, *args : Any) -> Any | None:
+    def calculate(self, *args : Any) -> Any:
         args = list(args)
         action , action_type , args_list = self.input_check(args)
         self.__last_result = action.execute(args_list)
@@ -26,45 +26,32 @@ class SimpleCalculator:
         return self.__last_result
 
     def input_check(self, args: Any) -> tuple[str , bool , list[int | float]]:
-        # if len(args) < 1 or len(args) > 3:
-        #     raise TypeError("Expected 1 to 3 arguments, got {}".format(len(args)))
         action_name = args[0]
         action, action_type = ActionsFactory.get_action(action_name)
         if action_type == BINARY:
-            list_args = self.input_binary_check(args)
+            list_args = self.val_input(args, action_type)
         elif action_type == UNARY:
-            list_args = self.input_unary_check(args)
+            list_args = self.val_input(args, action_type)
         else:
             raise ValueError(f"Action {args[0]} is not supported.")
         return action, action_type , list_args
 
 
-    def input_binary_check(self , args: Any) -> list[float]:
-            # if len(args) <2 or len(args) > 3:
-            #     raise TypeError("Binary actions require exactly 2 arguments") # when we add feature for more than 2 arguments we just need to remove it
-            if len(args) == 2:
-                args.append(None)
-            for ind in range(1,len(args)):
-                if args[ind] is None:
-                    args[ind-1],args[ind] = self.get_last_result() if ind == 2 else None , args[ind-1]
-                elif isinstance(args[ind] , (int, float)):
-                    continue
-                else:
-                    raise TypeError("Binary actions require numeric arguments")
-            return args
-
-    def input_unary_check(self, args: Any) -> list[int | float]:
-        if len(args) < 1 or len(args) > 2:
+    def val_input(self, args: Any, action_type : bool ) -> list[float]:
+        min_arguments = 2 if action_type == BINARY else 1
+        if action_type == UNARY and (len(args) < 1 or len(args) > 2):
             raise TypeError("Unary actions require exactly 1 argument")
-        if len(args) == 1:
+        if len(args) == min_arguments:
             args.append(None)
         for ind in range(1,len(args)):
             if args[ind] is None:
-                args[ind] = self.get_last_result() if ind == 1 else None
+                if action_type == BINARY:
+                    args[ind-1], args[ind] = self.get_last_result() if ind == 2 else None, args[ind-1]
+                else:
+                    args[ind] = self.get_last_result() if ind == 1 else None
             elif not isinstance(args[ind] , (int, float)):
                 raise TypeError("Unary actions require numeric arguments")
         return args
-
 
 
 class BinarActions(ABC):
