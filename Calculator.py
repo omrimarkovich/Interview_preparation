@@ -14,6 +14,7 @@ EXCEPTION_MESSAGE  = "An error occurred during th calculation. return the last r
 INPUT_MESSAGE = "Insert the action and arguments separated by spaces.\n you can Exit anytime by click 'e' butten \n"
 EXIT_MESSAGE = "Exiting the calculator.\n"
 CONTINUE_MESSAGE = "Press Enter to continue or 'e' to exit: \n"
+CONFIRMATION_MESSAGE = "Confirm your input. Write 'yes' to confirm \n"
 
 class SimpleCalculator:
     def __init__(self):
@@ -36,8 +37,13 @@ class SimpleCalculator:
             return self.get_last_result()
 
     def get_last_result(self):
-        if self.__last_result is None:
-            raise ValueError("No calculation has been performed yet")
+
+        try:
+            if self.__last_result is None:
+                raise ValueError("No calculation has been performed yet")
+        except ValueError as e:
+            print(e)
+            return None
         return self.__last_result
 
     def input_check(self, args: Any) -> tuple[str , bool , list[int | float]]:
@@ -65,7 +71,7 @@ class SimpleCalculator:
                 else:
                     args[ind] = self.get_last_result() if ind == 1 else None
             elif not args[ind].isnumeric():
-                raise TypeError("Unary actions require numeric arguments")
+                    raise TypeError("Unary actions require numeric arguments")
             else:
                 args[ind] = float(args[ind])
         return args
@@ -189,16 +195,18 @@ class ActionsFactory:
 def main(*args):
     calc = SimpleCalculator()
     while True:
-        print(INPUT_MESSAGE)
-        user_input = input().split()
+        user_input = input(INPUT_MESSAGE).split()
         if user_input[0].lower() == "e":
             print(EXIT_MESSAGE)
             break
-        print("You entered:", user_input)
+        print("You entered:", user_input,"\n", )
+        confirmation = input(CONFIRMATION_MESSAGE).strip().lower()
+        if confirmation != 'yes':
+            print("Input not confirmed, please try again.")
+            continue
         print("Calculating...")
         print ("Your result:\n" , calc.calculate(*user_input))
-        print(CONTINUE_MESSAGE)
-        user_input = input()
+        user_input = input(CONTINUE_MESSAGE)
         if user_input.lower() == 'e':
             print(EXIT_MESSAGE)
             break
