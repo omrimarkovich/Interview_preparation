@@ -1,7 +1,7 @@
 import typing
 from abc import ABC, abstractmethod
 from math import sin, cos, tan, log , radians
-from typing import Any , Optional
+from typing import Any , Optional , Union
 
 
 # Constants for actions
@@ -9,16 +9,31 @@ from typing import Any , Optional
 BINARY = 0
 UNARY = 1
 
+# Messages for user
+EXCEPTION_MESSAGE  = "An error occurred during th calculation. return the last result: \n"
+INPUT_MESSAGE = "Insert the action and arguments separated by spaces.\n you can Exit anytime by click 'e' butten \n"
+EXIT_MESSAGE = "Exiting the calculator.\n"
+CONTINUE_MESSAGE = "Press Enter to continue or 'e' to exit: \n"
 
 class SimpleCalculator:
     def __init__(self):
         self.__last_result = None
 
     def calculate(self, *args : Any) -> Any:
-        args = list(args)
-        action , action_type , args_list = self.input_check(args)
-        self.__last_result = action.execute(args_list)
-        return self.get_last_result()
+        try:
+            args = list(args)
+            action , action_type , args_list = self.input_check(args)
+            self.__last_result = action(args_list)
+        except ValueError as e:
+            print(e ,"\n", EXCEPTION_MESSAGE)
+        except TypeError as e:
+            print(e , "\n", EXCEPTION_MESSAGE)
+        except ZeroDivisionError as e:
+            print(e , "\n", EXCEPTION_MESSAGE)
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}" , "\n", EXCEPTION_MESSAGE)
+        finally:
+            return self.get_last_result()
 
     def get_last_result(self):
         if self.__last_result is None:
@@ -49,25 +64,27 @@ class SimpleCalculator:
                     args[ind-1], args[ind] = self.get_last_result() if ind == 2 else None, args[ind-1]
                 else:
                     args[ind] = self.get_last_result() if ind == 1 else None
-            elif not isinstance(args[ind] , (int, float)):
+            elif not args[ind].isnumeric():
                 raise TypeError("Unary actions require numeric arguments")
+            else:
+                args[ind] = float(args[ind])
         return args
 
 
 class BinarActions(ABC):
     @abstractmethod
-    def execute(self, args_list: list[int| float]) -> float:
+    def __call__(self, args_list: list[int| float]) -> float:
         raise NotImplementedError("This method should be overridden by subclasses")
 
 
 class UnaryActions(ABC):
     @abstractmethod
-    def execute(self, a: float):
+    def __call__(self, a: float):
         raise NotImplementedError("This method should be overridden by subclasses")
 
 
 class AddAction(BinarActions):
-    def execute(self, args_list: list[int| float]) -> float:
+    def __call__(self, args_list: list[Union[int ,float]]) -> float:
         ans = 0
         for ind in range(1, len(args_list)):
             ans += 0 if args_list[ind] is None else args_list[ind]
@@ -75,7 +92,7 @@ class AddAction(BinarActions):
 
 
 class SubtractAction(BinarActions):
-    def execute(self, args_list: list[int| float]) -> float:
+    def __call__(self, args_list: list[int| float]) -> float:
         ans = args_list[1]
         for ind in range(2, len(args_list)):
             ans -= 0 if args_list[ind] is None else args_list[ind]
@@ -83,7 +100,7 @@ class SubtractAction(BinarActions):
 
 
 class MultiplyAction(BinarActions):
-    def execute(self, args_list: list[int| float]) -> float:
+    def __call__(self, args_list: list[int| float]) -> float:
         ans = 1
         for ind in range(1, len(args_list)):
             ans *= 1 if args_list[ind] is None else args_list[ind]
@@ -91,21 +108,20 @@ class MultiplyAction(BinarActions):
 
 
 class DivideAction(BinarActions):
-    def execute(self, args_list: list[int| float]) -> float:
-        try:
-            ans = args_list[1]
-            for ind in range(2, len(args_list)):
-                b = 1 if args_list[ind] is None else args_list[ind]
-                if b == 0:
-                    raise ZeroDivisionError("Cannot divide by zero")
-                ans /= b
-            return ans
-        except ZeroDivisionError:
-            raise ValueError("Cannot divide by zero")
+    def __call__(self, args_list: list[int| float]) -> float:
+
+        ans = args_list[1]
+        for ind in range(2, len(args_list)):
+            b = 1 if args_list[ind] is None else args_list[ind]
+            if b == 0:
+                raise ZeroDivisionError("Cannot divide by zero")
+            ans /= b
+        return ans
+
 
 
 class PowerAction(BinarActions):
-    def execute(self, args_list: list[int| float]) -> float:
+    def __call__(self, args_list: list[int| float]) -> float:
         ans = args_list[1]
         for ind in range(2, len(args_list)):
             ans **= 1 if args_list[ind] is None else args_list[ind]
@@ -114,7 +130,7 @@ class PowerAction(BinarActions):
 
 
 class RootAction(BinarActions):
-    def execute(self, args_list: list[int| float]) -> float:
+    def __call__(self, args_list: list[int| float]) -> float:
         ans = args_list[1]
         if ans < 0:
             raise ValueError("Cannot calculate square root of a negative number")
@@ -127,27 +143,23 @@ class RootAction(BinarActions):
 
 
 class SinAction(UnaryActions):
-    def execute(self, args_list: list[int| float]) -> float:
-        try:
+    def __call__(self, args_list: list[int| float]) -> float:
             return sin(radians(args_list[1]))
-        except ValueError :
-            raise ValueError("Invalid input for sine function, must be a number ")
+
 
 
 class CosAction(UnaryActions):
-    def execute(self, args_list: list[int| float]) -> float:
-        try:
+    def __call__(self, args_list: list[int| float]) -> float:
             return cos(radians(args_list[1]))
-        except ValueError:
-            raise ValueError("Invalid input for cosine function, must be a number ")
+
 
 class TanAction(UnaryActions):
-    def execute(self, args_list: list[int| float]) -> float:
+    def __call__(self, args_list: list[int| float]) -> float:
         return tan(radians(args_list[1]))
 
 
 class LogAction(UnaryActions):
-    def execute(self, args_list: list[int| float]) -> float:
+    def __call__(self, args_list: list[int| float]) -> float:
         if args_list[1] <= 0:
             raise ValueError("Logarithm is undefined for non-positive numbers")
         return log(args_list[1])
@@ -172,3 +184,29 @@ class ActionsFactory:
         if action_name.lower() in cls.actions:
             return cls.actions[action_name.lower()]
         return None, None
+
+
+def main(*args):
+    calc = SimpleCalculator()
+    while True:
+        print(INPUT_MESSAGE)
+        user_input = input().split()
+        if user_input[0].lower() == "e":
+            print(EXIT_MESSAGE)
+            break
+        print("You entered:", user_input)
+        print("Calculating...")
+        print ("Your result:\n" , calc.calculate(*user_input))
+        print(CONTINUE_MESSAGE)
+        user_input = input()
+        if user_input.lower() == 'e':
+            print(EXIT_MESSAGE)
+            break
+
+
+
+
+
+
+if __name__ == "__main__":
+    main()
