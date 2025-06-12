@@ -47,11 +47,11 @@ class SimpleCalculator:
                 raise TypeError("Unary actions require numeric arguments")
 
     def add_last_result(self, action_type : bool , *args: Optional[str]) -> tuple[Optional[str]]:
-        min_argument = 1 if action_type else 0
-        if len(args) == min_argument  : # todo: fix when there is a none in the second place
-            args = (self.get_last_result()) + args
+        min_argument = 0 if action_type else 1
+        if len(args) == min_argument  :
+            args = (self.get_last_result() ,) + args
         elif args[0] is None:
-            args = (self.get_last_result()) + args[1:]
+            args = (self.get_last_result() ,) + args[1:]
         return args
 
 
