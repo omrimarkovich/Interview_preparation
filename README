@@ -6,15 +6,18 @@
 # Description:
     I built a simple calculator for binary operations in Python. the
     calculator can do addition, subtraction, multiplication and division.
+
 # Current Features:
     - The calculator can handle addition, subtraction, multiplication and division.
-    - The calculator can handle flouts.
+    - The calculator can handle flouts or ints.
     - The calculator can handle basic error handling for invalid inputs.
     - The calculator can handle basic error handling for division by zero.
     - The calculator can handle basic error handling for invalid operations.
     - The calculator save the result of the last operation and can recall it for the next operation.
+    - The calculator can handle unary operations such as sin , log etc...
+    - For a binar operation the calculator can handle endless numbers and an one operation.
 
 # Future Features:
-    - The calculator can handle unary operations such as sin , log etc...
+
     - The calculator can manege history of operations and can recall them.
     - The calculator can handel a full mathematical expression and not just binary operations.

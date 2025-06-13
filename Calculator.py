@@ -1,79 +1,212 @@
-import typing
 from abc import ABC, abstractmethod
-from math import sin , cos, tan, log
+from math import sin, cos, tan, log, radians
+from typing import Any, Optional, Union
+
+# Constants for actions
+
+BINARY = 0
+UNARY = 1
+
+# Messages for user
+INPUT_MESSAGE = "Insert the action and arguments separated by spaces.\n you can Exit anytime by click 'e' butten \n"
+EXIT_MESSAGE = "Exiting the calculator.\n"
+CONTINUE_MESSAGE = "Press Enter to continue or 'e' to exit: \n"
+CONFIRMATION_MESSAGE = "Confirm your input. Write 'yes' to confirm \n"
 
 
+class SimpleCalculator:
+    EXCEPTION_MESSAGE = "An error occurred during th calculation. return the last result: \n"
 
-class SimpleCalculator :
     def __init__(self):
         self.__last_result = None
 
-    def calculate(self, act: str ,a : float , b = None) -> float:
-        action = ActionsFactory.get_action(act)
-        if action is None:
-            raise ValueError(f"Action {act} is not supported")
-        if b is None:
-            b = a
-            a = self.__last_result
-        self.__last_result = action.execute(a, b)
-        return self.get_last_result()
+    def calculate(self, action_name: str, *args: Optional[str]) -> Any:
+        try:
+            action, action_type = ActionsFactory.get_action(action_name)
+            self.input_check(*args)
+            args = self.add_last_result(action_type, *args)
+            self.__last_result = action(*args)
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            print(e, "\n", self.EXCEPTION_MESSAGE)
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}", "\n", self.EXCEPTION_MESSAGE)
+        finally:
+            return self.get_last_result()
 
     def get_last_result(self):
         if self.__last_result is None:
-            raise ValueError("No calculation has been performed yet")
+            print("No calculation has been performed yet \n")
+            return None
         return self.__last_result
 
+    def input_check(self, *args: Optional[str]) -> None:
+        for arg in args:
+            if arg.strip().lower() != "none" and not arg.isnumeric() and not (
+                    self.is_negative(arg)):
+                raise TypeError(f"Unary actions require numeric arguments. Invalid argument: {arg}")
 
-class MathActions(ABC):
+    @classmethod
+    def is_negative(cls, arg: str) -> bool:
+        return True if arg[0] == "-" and arg[1:].isnumeric() else False
+
+    def add_last_result(self, action_type: bool, *args: Optional[str]) -> tuple[Optional[str]]:
+        min_argument = 0 if action_type else 1
+        if len(args) == min_argument:
+            args = (str(self.get_last_result()),) + args
+
+        elif args[0].strip().lower() == "none":
+            args = (str(self.get_last_result()),) + args[1:]
+        return args
+
+
+class BinaryAction(ABC):
+    MIN_ARGUMENTS = 2
+
     @abstractmethod
-    def execute(self, a: float, b: float) -> float:
+    def __call__(self, *args: Optional[str]) -> float:
         raise NotImplementedError("This method should be overridden by subclasses")
 
-class AddAction(MathActions):
-    def execute(self, a: float, b: float) -> float:
-        return a + b
+    @classmethod
+    def argument_check(cls, *args: Optional[str]) -> None:
+        if len(args) < cls.MIN_ARGUMENTS:
+            raise ValueError("At least two arguments are required for binary actions")
 
-class SubtractAction(MathActions):
-    def execute(self, a: float, b: float) -> float:
-        return a - b
 
-class MultiplyAction(MathActions):
-    def execute(self, a: float, b: float) -> float:
-        return a * b
+class UnaryActions(ABC):
+    MAX_ARGUMENTS = 1
 
-class DivideAction(MathActions):
-    def execute(self, a: float, b: float) -> float:
-        try:
-            return a / b
-        except ZeroDivisionError:
-            raise ValueError("Cannot divide by zero")
+    @abstractmethod
+    def __call__(self, a: float):
+        raise NotImplementedError("This method should be overridden by subclasses")
 
-class PowerAction(MathActions):
-    def execute(self, a: float, b: float) -> float:
-        return a ** b
+    @classmethod
+    def argument_check(cls, *args: Optional[str]) -> None:
+        if len(args) > cls.MAX_ARGUMENTS:
+            raise TypeError("Unary actions require at most 1 argument")
 
-class RootAction(MathActions):
-    def execute(self, a: float, b: float = None) -> float:
-        if a < 0:
+
+class AddAction(BinaryAction):
+    def __call__(self, *args: Optional[str]) -> float:
+        ans = 0
+        for ind in range(len(args)):
+            ans += 0 if args[ind].strip().lower() == "none" else float(args[ind])
+        return ans
+
+
+class SubtractAction(BinaryAction):
+    def __call__(self, *args: Optional[str]) -> float:
+        ans = float(args[0])
+        for ind in range(1, len(args)):
+            ans -= 0 if args[ind].strip().lower() == "none" else float(args[ind])
+        return ans
+
+
+class MultiplyAction(BinaryAction):
+    def __call__(self, *args: Optional[str]) -> float:
+        ans = 1
+        for ind in range(len(args)):
+            ans *= 1 if args[ind].strip().lower() == "none" else float(args[ind])
+        return ans
+
+
+class DivideAction(BinaryAction):
+    def __call__(self, *args: Optional[str]) -> float:
+
+        ans = float(args[0])
+        for ind in range(1, len(args)):
+            b = 1 if args[ind].strip().lower() == "none" else float(args[ind])
+            if b == 0:
+                raise ZeroDivisionError("Cannot divide by zero")
+            ans /= b
+        return ans
+
+
+class PowerAction(BinaryAction):
+    def __call__(self, *args: Optional[str]) -> float:
+        ans = float(args[0])
+        for ind in range(1, len(args)):
+            if (-1 < float(args[ind]) < 1) and float(args[ind]) != 0:
+                ans = RootAction(ans, 1 / args[ind])
+            ans **= 1 if args[ind].strip().lower() == "none" else float(args[ind])
+        return ans
+
+
+class RootAction(BinaryAction):
+    def __call__(self, *args: Optional[str]) -> float:
+        ans = float(args[0])
+        if ans < 0:
             raise ValueError("Cannot calculate square root of a negative number")
-        return a ** (1/b)
+        for ind in range(1, len(args)):
+            b = 1 if args[ind].strip().lower() == "none" else float(args[ind])
+            if b <= 0:
+                raise ValueError("Root degree must be a positive number")
+            ans = ans ** (1 / b)
+        return ans
+
+
+class SinAction(UnaryActions):
+    def __call__(self, *args: Optional[str]) -> float:
+        return sin(radians(float(args[0])))
+
+
+class CosAction(UnaryActions):
+    def __call__(self, *args: Optional[str]) -> float:
+        return cos(radians(float(args[0])))
+
+
+class TanAction(UnaryActions):
+    def __call__(self, *args: Optional[str]) -> float:
+        return tan(radians(float(args[0])))
+
+
+class LogAction(UnaryActions):
+    def __call__(self, args_list: list[int | float]) -> float:
+        if args_list[0] <= 0:
+            raise ValueError("Logarithm is undefined for non-positive numbers")
+        return log(float(args_list[0]))
 
 
 class ActionsFactory:
     actions = {
-        "add": AddAction(),
-        "subtract": SubtractAction(),
-        "multiply": MultiplyAction(),
-        "divide": DivideAction(),
-        "power": PowerAction(),
-        "root": RootAction()
+        "add": (AddAction(), BINARY),
+        "subtract": (SubtractAction(), BINARY),
+        "multiply": (MultiplyAction(), BINARY),
+        "divide": (DivideAction(), BINARY),
+        "power": (PowerAction(), BINARY),
+        "root": (RootAction(), BINARY),
+        "sin": (SinAction(), UNARY),
+        "cos": (CosAction(), UNARY),
+        "tan": (TanAction(), UNARY),
+        "log": (LogAction(), UNARY),
     }
 
     @classmethod
-    def get_action(cls, action_name: str) -> typing.Optional[MathActions]:
+    def get_action(cls, action_name: str) -> tuple[BinaryAction, int] | tuple[UnaryActions, int] | \
+                                             tuple[None, None]:
         if action_name.lower() in cls.actions:
             return cls.actions[action_name.lower()]
-        return None
+        raise ValueError(f"Action {action_name} is not supported.")
 
 
+def main(*args):
+    calc = SimpleCalculator()
+    while True:
+        user_input = input(INPUT_MESSAGE).split()
+        if user_input[0].lower() == "e":
+            print(EXIT_MESSAGE)
+            break
+        print("You entered:", user_input, "\n", )
+        confirmation = input(CONFIRMATION_MESSAGE).strip().lower()
+        if confirmation != 'yes':
+            print("Input not confirmed, please try again.")
+            continue
+        print("Calculating...")
+        print("Your result:\n", calc.calculate(*user_input))
+        user_input = input(CONTINUE_MESSAGE)
+        if user_input.lower() == 'e':
+            print(EXIT_MESSAGE)
+            break
 
+
+if __name__ == "__main__":
+    main()
