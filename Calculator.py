@@ -43,15 +43,20 @@ class SimpleCalculator:
 
     def input_check(self, *args: Optional[str]) -> None:
         for arg in args:
-            if arg is None or not arg.isnumeric():
-                raise TypeError("Unary actions require numeric arguments")
+            if  arg.strip().lower()  != "none" and not arg.isnumeric() and not(self.is_negative(arg  )):
+                raise TypeError(f"Unary actions require numeric arguments. Invalid argument: {arg}")
+
+    @classmethod
+    def is_negative(cls, arg : str ) -> bool:
+        return True if arg[0] == "-" and arg[1:].isnumeric() else False
 
     def add_last_result(self, action_type : bool , *args: Optional[str]) -> tuple[Optional[str]]:
         min_argument = 0 if action_type else 1
         if len(args) == min_argument  :
-            args = (self.get_last_result() ,) + args
-        elif args[0] is None:
-            args = (self.get_last_result() ,) + args[1:]
+            args = (str(self.get_last_result()) ,) + args
+
+        elif args[0].strip().lower() ==  "none":
+            args = (str(self.get_last_result()) ,) + args[1:]
         return args
 
 
@@ -83,15 +88,15 @@ class AddAction(BinaryAction):
     def __call__(self,  *args : Optional[str]) -> float:
         ans = 0
         for ind in range(len(args)):
-            ans += 0 if args[ind] is None else float(args[ind])
+            ans += 0 if args[ind].strip().lower() == "none" else float(args[ind])
         return ans
 
 
 class SubtractAction(BinaryAction):
     def __call__(self,  *args : Optional[str]) -> float:
         ans = float(args[0])
-        for ind in range(len(args)):
-            ans -= 0 if args[ind] is None else float(args[ind])
+        for ind in range(1, len(args)):
+            ans -= 0 if args[ind].strip().lower() == "none" else float(args[ind])
         return ans
 
 
@@ -99,7 +104,7 @@ class MultiplyAction(BinaryAction):
     def __call__(self,  *args : Optional[str]) -> float:
         ans = 1
         for ind in range(len(args)):
-            ans *= 1 if args[ind] is None else float(args[ind])
+            ans *= 1 if args[ind].strip().lower() == "none" else float(args[ind])
         return ans
 
 
@@ -107,8 +112,8 @@ class DivideAction(BinaryAction):
     def __call__(self,  *args : Optional[str]) -> float:
 
         ans = float(args[0])
-        for ind in range(len(args)):
-            b = 1 if args[ind] is None else float(args[ind])
+        for ind in range(1, len(args)):
+            b = 1 if args[ind].strip().lower() == "none" else float(args[ind])
             if b == 0:
                 raise ZeroDivisionError("Cannot divide by zero")
             ans /= b
@@ -119,8 +124,10 @@ class DivideAction(BinaryAction):
 class PowerAction(BinaryAction):
     def __call__(self,  *args : Optional[str]) -> float:
         ans = float(args[0])
-        for ind in range(len(args)):
-            ans **= 1 if args[ind] is None else float(args[ind])
+        for ind in range(1, len(args)):
+            if (-1 < float(args[ind]) < 1 ) and float(args[ind])!= 0:
+                ans = RootAction(ans ,1 /args[ind])
+            ans **= 1 if args[ind].strip().lower() == "none" else float(args[ind])
         return ans
 
 
@@ -130,8 +137,8 @@ class RootAction(BinaryAction):
         ans = float(args[0])
         if ans < 0:
             raise ValueError("Cannot calculate square root of a negative number")
-        for ind in range(2, len(args)):
-            b = 1 if args[ind] is None else float(args[ind])
+        for ind in range(1, len(args)):
+            b = 1 if args[ind].strip().lower() == "none" else float(args[ind])
             if b <= 0:
                 raise ValueError("Root degree must be a positive number")
             ans = ans ** (1 / b)
